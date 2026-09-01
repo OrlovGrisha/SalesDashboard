@@ -46,6 +46,8 @@ public class Sale
         // в чем смысл? а не нужна проверка на cancelled?
         if (Status == SaleStatus.Refunded)
             throw new DomainException("Cannot cancel a refunded sale");
+        if (Status == SaleStatus.Cancelled)
+            throw new DomainException("Sale is already cancelled");
         
         Status = SaleStatus.Cancelled;
     }
@@ -55,8 +57,19 @@ public class Sale
         if (Status != SaleStatus.Paid)
             throw new DomainException("Cannot refund unpaid sale");
         
+        
         Status = SaleStatus.Refunded;
     }
     
+    // Business rule: Cancelled and Refunded both excluded from Revenue/GrossProfit.
+    // Refund amount tracked separately for its own metric.
+    public bool IsRevenueGenerating => Status == SaleStatus.Paid;
     
+    public decimal Revenue => IsRevenueGenerating ? _items.Sum(i => i.LineRevenue) : 0m;
+    public decimal Cost => IsRevenueGenerating ? _items.Sum(i => i.LineCost) : 0m;
+    public decimal GrossProfit => Revenue - Cost;
+    
+    public decimal RefundedAmount => Status == SaleStatus.Refunded
+        ? _items.Sum(i => i.LineRevenue)
+        : 0m;
 }

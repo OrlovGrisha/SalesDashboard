@@ -2,15 +2,15 @@
 
 public class SaleItem
 {
-    public Guid Id { get; set; }
-    public Guid SaleId { get; set; }
-    public Guid ProductId { get; set; }
-    public int Quantity { get; set; }
+    public Guid Id { get; private set; }
+    public Guid SaleId { get; private set; }
+    public Guid ProductId { get; private set; }
+    public int Quantity { get; private set; }
     
     // зачем эти поля нужны?
     // разве UnitPrice назначается не в Product?
-    public Money UnitPrice { get; set; }
-    public Money UnitCost { get; set; }
+    public Money UnitPrice { get; private set; }
+    public Money UnitCost { get; private set; }
     
     private SaleItem() { }
     
@@ -31,10 +31,9 @@ public class SaleItem
         return new SaleItem(productId, quantity, unitPrice, unitCost);
     }
     
-    // что за 3 поля?
-    // почему internal? можно заменить на другой?
-    internal void AssignToSale(Guid saleId) => SaleId = saleId;
+    public void AssignToSale(Guid saleId) => SaleId = saleId;
 
+    // Зачем нужный 2 метода
     public decimal LineRevenue => UnitPrice.Amount * Quantity;
     public decimal LineCost => UnitCost.Amount * Quantity;
 }
