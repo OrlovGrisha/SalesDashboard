@@ -22,6 +22,15 @@
 
 `docker compose up --build -d`
 
+После запуска будут доступны:
+
+| Сервис | URL |
+|---|---|
+| Frontend (дашборд) | http://localhost:5173 |
+| Backend API | http://localhost:5000/api |
+| Scalar (интерактивная документация API) | http://localhost:5000/scalar/v1 |
+| PostgreSQL | localhost:5432 |
+
 ## Архитектура
 
 ### Backend
@@ -44,6 +53,7 @@ src/
 ├── features/   # пользовательские сценарии: select-period, switch-ranking-mode
 ├── entities/   # бизнес-сущности: sale, manager, product, category, analytics
 └── shared/     # api-клиент, UI-кит, форматтеры, конфиг
+```
 
 ## Бизнес-правила
 
