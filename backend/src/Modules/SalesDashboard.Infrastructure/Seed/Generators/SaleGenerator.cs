@@ -100,24 +100,23 @@ public class SaleGenerator
         {
             var totalDays = (periodEnd - periodStart).Days;
 
-            // Взвешиваем дату по сезонности: пересэмплируем, если случайный месяц "не повезло" по сезонному множителю
             var randomDay = _random.Instance.Next(0, totalDays);
             var candidate = periodStart.AddDays(randomDay);
 
             var seasonRoll = _random.Instance.NextDouble();
-            var seasonWeight = SeasonMultiplier(candidate.Month) / 1.35; // нормализация к [0..1]
-            if (seasonRoll > seasonWeight) continue; // не прошли сезонный фильтр — пробуем другую дату
+            var seasonWeight = SeasonMultiplier(candidate.Month) / 1.35;
+            if (seasonRoll > seasonWeight) continue;
 
             if (gapStart.HasValue && candidate >= gapStart.Value && candidate < gapEnd!.Value)
-                continue; // попали в gap-период менеджера — пробуем снова
+                continue;
 
-            // Время в течение дня — рабочие часы
             var hour = _random.Instance.Next(9, 19);
             var minute = _random.Instance.Next(0, 60);
-            return new DateTime(candidate.Year, candidate.Month, candidate.Day, hour, minute, 0);
+
+            return new DateTime(candidate.Year, candidate.Month, candidate.Day, hour, minute, 0, DateTimeKind.Utc);
         }
 
-        return null; // не удалось подобрать за 10 попыток — редкий случай, просто пропускаем эту продажу
+        return null;
     }
 
     private void ApplyStatus(Sale sale)

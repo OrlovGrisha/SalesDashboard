@@ -1,3 +1,4 @@
+using Host.ExceptionHandling;
 using SalesDashboard.Application;
 using SalesDashboard.Infrastructure;
 using Scalar.AspNetCore;
@@ -11,6 +12,9 @@ class Program
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+
+        builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+        builder.Services.AddProblemDetails();
         
         const string CorsPolicyName = "AllowFrontend";
         builder.Services.AddCors(options =>
@@ -33,6 +37,8 @@ class Program
         
         var app = builder.Build();
 
+        app.UseExceptionHandler();
+        
         app.UseCors(CorsPolicyName);
         
         if (app.Environment.IsDevelopment())

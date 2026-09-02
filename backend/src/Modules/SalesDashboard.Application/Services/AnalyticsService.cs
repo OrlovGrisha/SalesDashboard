@@ -95,7 +95,7 @@ public class AnalyticsService : IAnalyticsService
     public async Task<IReadOnlyList<ProductBreakdownDto>> GetTopProductsAsync(DateRange period, int take, CancellationToken ct)
     {
         var aggregates = await _saleRepository.GetTopProductsAsync(period, take, ct);
-        var products = await _productRepository.GetAllWithCategoryAsync(ct);
+        var products = await _productRepository.GetByIdsAsync(aggregates.Select(a => a.ProductId), ct);
 
         return aggregates
             .Select(a =>

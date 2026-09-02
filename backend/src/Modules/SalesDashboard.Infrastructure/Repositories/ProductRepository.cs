@@ -18,9 +18,4 @@ public class ProductRepository : IProductRepository
             .ToListAsync(ct);
         return products.ToDictionary(p => p.Id);
     }
-
-    public Task<IReadOnlyDictionary<Guid, Product>> GetAllWithCategoryAsync(CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
 }
