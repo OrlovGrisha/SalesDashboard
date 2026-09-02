@@ -31,10 +31,10 @@ public class AnalyticsService : IAnalyticsService
         var previous = await _saleRepository.GetAggregateAsync(period.PreviousPeriod,  cancellationToken);
         
         var grossProfit = current.Revenue - current.Cost;
-        var averageCheck = current.Cost > 0 ? current.Revenue - current.Cost : 0;
-        
+        var averageCheck = current.Count > 0 ? current.Revenue / current.Count : 0;
+
         var prevGrossProfit = previous.Revenue - previous.Cost;
-        var prevAverageCheck = previous.Cost > 0 ? previous.Revenue / previous.Cost : 0;
+        var prevAverageCheck = previous.Count > 0 ? previous.Revenue / previous.Count : 0;
 
         var byManager = await _saleRepository.GetAggregateByManagerAsync(period, cancellationToken);
         string? topManagerName = null;

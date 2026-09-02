@@ -12,7 +12,7 @@ public class PeriodResolver
             PeriodPreset.Today => new DateRange(today, today.AddDays(1)),
             PeriodPreset.Last7Days => new DateRange(today.AddDays(-7), today.AddDays(1)),
             PeriodPreset.Last30Days => new DateRange(today.AddDays(-30), today.AddDays(1)),
-            PeriodPreset.ThisMonth => new DateRange(new DateTime(today.Year, today.Month, 1), today.AddDays(1)),
+            PeriodPreset.ThisMonth => new DateRange(StartOfMonth(today), today.AddDays(1)),
             PeriodPreset.LastMonth => GetLastMonth(today),
             
             PeriodPreset.Custom => new DateRange(
@@ -24,8 +24,11 @@ public class PeriodResolver
 
     private static DateRange GetLastMonth(DateTime today)
     {
-        var firstOfThisMonth = new DateTime(today.Year, today.Month, 1);
+        var firstOfThisMonth = StartOfMonth(today);
         var firstOfLastMonth = firstOfThisMonth.AddMonths(-1);
         return new DateRange(firstOfLastMonth, firstOfThisMonth);
     }
+
+    private static DateTime StartOfMonth(DateTime today) =>
+        new(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 }

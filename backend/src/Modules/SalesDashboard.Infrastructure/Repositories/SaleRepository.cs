@@ -43,20 +43,28 @@ public class SaleRepository : ISaleRepository
     public async Task<IReadOnlyList<TrendPointResult>> GetTrendAsync(
         DateRange period, TrendGranularity granularity, CancellationToken ct)
     {
-        return await _db.Sales
+        // EF Core/Npgsql can't translate a GroupBy over a computed date-bucket key combined
+        // with a nested Sum over the Items navigation in the same query, so the per-sale
+        // revenue/cost is aggregated in SQL first and the date-bucket grouping happens in memory.
+        var perSale = await _db.Sales
             .Where(s => s.SaleDate >= period.From && s.SaleDate < period.To && s.Status == SaleStatus.Paid)
+            .Select(s => new
+            {
+                s.SaleDate,
+                Revenue = s.Items.Sum(i => i.UnitPrice.Amount * i.Quantity),
+                Cost = s.Items.Sum(i => i.UnitCost.Amount * i.Quantity),
+            })
+            .ToListAsync(ct);
+
+        return perSale
             .GroupBy(s => granularity == TrendGranularity.Month
                 ? new DateTime(s.SaleDate.Year, s.SaleDate.Month, 1)
                 : granularity == TrendGranularity.Week
                     ? s.SaleDate.Date.AddDays(-(((int)s.SaleDate.DayOfWeek + 6) % 7))
                     : s.SaleDate.Date)
-            .Select(g => new TrendPointResult(
-                g.Key,
-                g.Sum(s => s.Items.Sum(i => i.UnitPrice.Amount * i.Quantity)),
-                g.Sum(s => s.Items.Sum(i => i.UnitCost.Amount * i.Quantity)),
-                g.Count()))
+            .Select(g => new TrendPointResult(g.Key, g.Sum(s => s.Revenue), g.Sum(s => s.Cost), g.Count()))
             .OrderBy(p => p.PeriodStart)
-            .ToListAsync(ct);
+            .ToList();
     }
 
     public async Task<IReadOnlyList<CategoryAggregateResult>> GetAggregateByCategoryAsync(
