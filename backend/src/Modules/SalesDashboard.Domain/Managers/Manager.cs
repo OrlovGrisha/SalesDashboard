@@ -17,7 +17,7 @@ public class Manager
         IsActive = isActive;
     }
 
-    public static Manager Create(string fullName, string team, bool isActive)
+    public static Manager Create(string fullName, string team, bool isActive = true)
     {
         // не конфликтует с fullname = null!;?
         if (string.IsNullOrWhiteSpace(fullName))
