@@ -11,22 +11,24 @@ public class SaleRepository : ISaleRepository
 {
     private readonly AppDbContext _db;
     public SaleRepository(AppDbContext db) => _db = db;
-
-    public async Task<SalesAggregateResult> GetAggregateAsync(DateRange period, CancellationToken ct)
+    
+    public async Task<SalesAggregateResult> GetAggregateAsync(DateRange period, CancellationToken cancellationToken)
     {
-        var result = await _db.Sales
-            .Where(s => s.SaleDate >= period.From && s.SaleDate < period.To && s.Status == SaleStatus.Paid)
+        var query = _db.Sales
+            .Where(s => s.Status == SaleStatus.Paid && period.From <= s.SaleDate && period.To > s.SaleDate)
+            .SelectMany(s => s.Items)
             .GroupBy(_ => 1)
             .Select(g => new SalesAggregateResult(
-                g.Sum(s => s.Items.Sum(i => i.UnitPrice.Amount * i.Quantity)),
-                g.Sum(s => s.Items.Sum(i => i.UnitCost.Amount * i.Quantity)),
-                g.Count()))
-            .FirstOrDefaultAsync(ct);
+                g.Sum(s => s.Quantity * s.UnitPrice.Amount),
+                g.Sum(s => s.Quantity * s.UnitCost.Amount),
+                g.Select(s => s.SaleId).Distinct().Count()));
+        
+        Console.WriteLine(query.ToQueryString());
 
-        return result ?? new SalesAggregateResult(0, 0, 0);
+        return await query.FirstOrDefaultAsync(cancellationToken) ?? new SalesAggregateResult(0, 0 , 0);
     }
 
-    public async Task<IReadOnlyList<ManagerAggregateResult>> GetAggregateByManagerAsync(
+    /*public async Task<IReadOnlyList<ManagerAggregateResult>> GetAggregateByManagerAsync(
         DateRange period, CancellationToken ct)
     {
         return await _db.Sales
@@ -38,7 +40,7 @@ public class SaleRepository : ISaleRepository
                 g.Sum(s => s.Items.Sum(i => i.UnitCost.Amount * i.Quantity)),
                 g.Count()))
             .ToListAsync(ct);
-    }
+    }*/
 
     public async Task<IReadOnlyList<TrendPointResult>> GetTrendAsync(
         DateRange period, TrendGranularity granularity, CancellationToken ct)
@@ -85,7 +87,7 @@ public class SaleRepository : ISaleRepository
             .ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<ProductAggregateResult>> GetTopProductsAsync(
+    /*public async Task<IReadOnlyList<ProductAggregateResult>> GetTopProductsAsync(
         DateRange period, int take, CancellationToken ct)
     {
         return await (
@@ -101,6 +103,29 @@ public class SaleRepository : ISaleRepository
                 g.Sum(i => i.Quantity)))
             .Take(take)
             .ToListAsync(ct);
+    }*/
+
+    public async Task<IReadOnlyList<ProductAggregateResult>> GetTopProductsAsync(DateRange period, int take, CancellationToken ct)
+    {
+        const string sql = """
+                           SELECT si."ProductId"                            AS "ProductId",
+                                  SUM(si.unit_price * si."Quantity")        AS "Revenue",
+                                  SUM(si.unit_cost  * si."Quantity")        AS "Cost",
+                                  SUM(si."Quantity")                        AS "QuantitySold"
+                           FROM sale_items AS si
+                           JOIN sales AS s ON s."Id" = si."SaleId"
+                           WHERE s."Status" = 'Paid'
+                             AND s."SaleDate" >= {0}
+                             AND s."SaleDate" <  {1}
+                           GROUP BY si."ProductId"
+                           ORDER BY SUM(si.unit_price * si."Quantity") DESC
+                           LIMIT {2}
+                           """;
+        
+        var result = await _db.Database.SqlQueryRaw<ProductAggregateResult>(sql, period.From, period.To, take)
+            .ToListAsync(ct);
+
+        return result;
     }
 
     public async Task<IReadOnlyList<Sale>> GetRecentAsync(DateRange period, int take, CancellationToken ct)
@@ -116,4 +141,19 @@ public class SaleRepository : ISaleRepository
 
     public async Task AddAsync(Sale sale, CancellationToken ct) =>
         await _db.Sales.AddAsync(sale, ct);
+
+
+    public async Task<IReadOnlyList<ManagerAggregateResult>> GetAggregateByManagerAsync(DateRange period, CancellationToken ct)
+    {
+        var result = await _db.Sales.Where(s => s.SaleDate >= period.From && s.SaleDate < period.To)
+            .GroupBy(s => s.ManagerId)
+            .Select(g => new ManagerAggregateResult(
+                g.Key, 
+                g.Sum(s => s.Items.Sum(item => item.UnitPrice.Amount * item.Quantity)), 
+                g.Sum(s => s.Items.Sum(i => i.UnitCost.Amount * i.Quantity)),
+                g.Count())
+            ).ToListAsync(ct);
+            
+        return result.AsReadOnly();
+    }
 }
