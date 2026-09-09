@@ -16,6 +16,7 @@ public class ProductRepository : IProductRepository
         var products = await _db.Products.AsNoTracking()
             .Where(p => idList.Contains(p.Id))
             .ToListAsync(ct);
+        
         return products.ToDictionary(p => p.Id);
     }
 }
